@@ -4,6 +4,7 @@ import com.danielflower.internalnpmserver.App;
 import com.danielflower.internalnpmserver.Config;
 import com.danielflower.internalnpmserver.controllers.HomepageHandler;
 import com.danielflower.internalnpmserver.controllers.NpmHandler;
+import com.danielflower.internalnpmserver.controllers.StaticHandler;
 import com.danielflower.internalnpmserver.controllers.StaticHandlerImpl;
 import com.danielflower.internalnpmserver.rendering.HttpViewRenderer;
 import com.danielflower.internalnpmserver.rendering.NonCachableHttpViewRenderer;
@@ -54,16 +55,24 @@ public class WebServer {
                 new PackageReWritingFileDownloader(
                 new FileDownloaderImpl(config.getProxy()), config.getNpmRepositoryURL(), config.getNpmEndPoint().toString());
 
-        StaticHandlerImpl npmCacheStaticHandler = new StaticHandlerImpl(config.getNpmCacheFolder());
-        RemoteDownloadPolicy remoteDownloadPolicy = new ReDownloadOldJSONFilesPolicy(npmCacheStaticHandler);
+        StaticHandler npmCacheStaticHandler = new StaticHandlerImpl(config.getNpmCacheFolder(), config.getPort(), config.getWebServerHostName(), config.isOffline(), config.getNpmRepositoryURL());
+        RemoteDownloadPolicy remoteDownloadPolicy = getRemoteDownloadPolicy(config, npmCacheStaticHandler);
         RequestHandler[] handlers = new RequestHandler[]{
                 new HomepageHandler(httpViewRenderer, config),
                 new NpmHandler(downloader, npmCacheStaticHandler, config.getNpmRepositoryURL(), config.getNpmCacheFolder(), remoteDownloadPolicy),
-                new StaticHandlerImpl(STATIC_ROOT)
+                new StaticHandlerImpl(STATIC_ROOT, config.getPort(), config.getWebServerHostName(), config.isOffline(), config.getNpmRepositoryURL())
         };
         RequestRouter router = new RequestRouter(handlers);
         ErrorHandlingWebContainer errorHandler = new ErrorHandlingWebContainer(router);
         return new WebServer(new LoggingWebContainer(errorHandler), config.getPort(), config.getWebServerHostName());
+    }
+
+    private static RemoteDownloadPolicy getRemoteDownloadPolicy(Config config, StaticHandler npmCacheStaticHandler) {
+        if (config.isOffline()) {
+            return new NeverRemoteDownloadPolicy();
+        } else {
+            return new ReDownloadOldJSONFilesPolicy(npmCacheStaticHandler);
+        }
     }
 
     public void start() throws IOException {

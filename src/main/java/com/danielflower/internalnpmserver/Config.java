@@ -19,8 +19,9 @@ public class Config {
     private final String npmRepositoryURL;
     private final String webServerHostName;
     private final Proxy proxy;
+    private final boolean offline;
 
-    public Config(int port, File npmCacheFolder, String npmRepositoryURL, String webServerHostName, Proxy proxy) {
+    public Config(int port, File npmCacheFolder, String npmRepositoryURL, String webServerHostName, Proxy proxy, boolean offline) {
         this.webServerHostName = webServerHostName;
         this.proxy = proxy;
         if (!npmRepositoryURL.startsWith("http://")) {
@@ -31,6 +32,7 @@ public class Config {
         this.port = port;
         this.npmCacheFolder = npmCacheFolder;
         this.npmRepositoryURL = npmRepositoryURL;
+        this.offline = offline;
     }
 
     public int getPort() {
@@ -75,7 +77,10 @@ public class Config {
         String npmURL = props.getProperty("npmRegistryURL");
         String webServerHostName = props.getProperty("webServerHostName");
         Proxy proxy = getProxy(props);
-        return new Config(port, cacheFolder, npmURL, webServerHostName, proxy);
+
+        boolean offline = Boolean.parseBoolean(props.getProperty("offline"));
+
+        return new Config(port, cacheFolder, npmURL, webServerHostName, proxy, offline);
     }
 
     private static Proxy getProxy(Properties props) {
@@ -120,5 +125,9 @@ public class Config {
         } catch (MalformedURLException e) {
             throw new RuntimeException(e); // yay for checked exceptions
         }
+    }
+
+    public boolean isOffline() {
+        return offline;
     }
 }

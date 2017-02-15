@@ -2,6 +2,7 @@ package com.danielflower.internalnpmserver.controllers;
 
 import com.danielflower.internalnpmserver.webserver.ContentTypeGuesser;
 import com.danielflower.internalnpmserver.webserver.RequestHandler;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.simpleframework.http.Request;
 import org.simpleframework.http.Response;
@@ -12,10 +13,16 @@ import java.util.Date;
 public class StaticHandlerImpl implements StaticHandler, RequestHandler {
 
 	private final File webroot;
+	private final String webServerEndPoint;
+	private final boolean offline;
+	private final String npmRepositoryURL;
 	private final ContentTypeGuesser contentTypeGuesser = new ContentTypeGuesser();
 
-	public StaticHandlerImpl(File folderToServeFrom) {
-		webroot = folderToServeFrom;
+	public StaticHandlerImpl(File folderToServeFrom, int port, String webServerHostName, boolean offline, String npmRepositoryURL) {
+		this.webroot = folderToServeFrom;
+		this.webServerEndPoint = "http://" +webServerHostName +":"  +port;
+		this.offline = offline;
+		this.npmRepositoryURL = npmRepositoryURL;
 	}
 
 	@Override
@@ -65,11 +72,20 @@ public class StaticHandlerImpl implements StaticHandler, RequestHandler {
 				resp.setValue("Cache-Control", "max-age=29030400, public");
 			}
 
-			InputStream in = new FileInputStream(localFile);
-			IOUtils.copy(in, out);
-			IOUtils.closeQuietly(in);
+			if (path.endsWith(".json") && isOffline()) {
+				String contents = FileUtils.readFileToString(localFile, "UTF-8").replace(npmRepositoryURL, webServerEndPoint);
+				IOUtils.write(contents, out, "UTF-8");
+			} else {
+				InputStream in = new FileInputStream(localFile);
+				IOUtils.copy(in, out);
+				IOUtils.closeQuietly(in);
+			}
 		}
 		IOUtils.closeQuietly(out);
+	}
+
+	private boolean isOffline() {
+		return offline && !npmRepositoryURL.equalsIgnoreCase(webServerEndPoint);
 	}
 
 	@Override

@@ -3,6 +3,7 @@ package com.danielflower.internalnpmserver.controllers;
 import junit.framework.Assert;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.WriterOutputStream;
+import org.exparity.hamcrest.date.DateMatchers;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -18,6 +19,7 @@ import java.io.File;
 import java.io.OutputStreamWriter;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -26,7 +28,7 @@ import static org.junit.Assert.assertThat;
 @RunWith(JMock.class)
 public class StaticHandlerImplTest {
 
-    private final StaticHandlerImpl staticHandler = new StaticHandlerImpl(new File("src/main/resources/webroot"));
+    private final StaticHandlerImpl staticHandler = new StaticHandlerImpl(new File("src/main/resources/webroot"), 9100, "localhost", false, "");
 	private final Mockery context = new JUnit4Mockery();
 	private final Request request = context.mock(Request.class);
 	private final Response response = context.mock(Response.class);
@@ -91,7 +93,7 @@ public class StaticHandlerImplTest {
 		if (!sampleFile.setLastModified(now.getTime())) {
 			throw new RuntimeException("This test can't set the file modified time so can't test that this works");
 		}
-		assertThat(staticHandler.dateCreated("/foundation.html"), is(equalTo(now)));
+		assertThat(staticHandler.dateCreated("/foundation.html"), DateMatchers.within(1, TimeUnit.SECONDS, now));
 	}
 
 	@Test
@@ -115,7 +117,7 @@ public class StaticHandlerImplTest {
 	@Test
 	public void returns304NotModifiedWhenETagHasNotChanged() throws Exception {
 		File webRoot = new File("target/testArea/" + UUID.randomUUID());
-		StaticHandlerImpl staticHandler = new StaticHandlerImpl(webRoot);
+		StaticHandlerImpl staticHandler = new StaticHandlerImpl(webRoot, 9100, "localhost", false, "");
 		final File someFile = new File(webRoot, "blah.json");
 		FileUtils.writeStringToFile(someFile, "Version 1");
 
